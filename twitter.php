@@ -36,15 +36,12 @@ class Kirby_Twitter {
 
 	/**
 	 * We still want the constructor so don't privatise
+	 *
+	 * @param The desired users handle
 	 */
 	public function __construct ($user_handle) {
 		$this->_user_handle = $user_handle;
 		$this->_cache = c::get(self::$cache_name);
-
-		if ($this->_cache === null) {
-			c::set(self::$cache_name, "Handle: $user_handle\n");
-			$this->_cache = c::get(self::$cache_name);
-		}
 
 		# Just set this to false to be sure
 		$this->fetching = false;
@@ -52,19 +49,14 @@ class Kirby_Twitter {
 		return $this;
 	}
 
-	private function _read ($in) {
-		# Get our lines
-		$lines = explode('\n', $in);
-
-		# Foreach line, we want the key and value pair
-		foreach ($lines as $line) {
-			# So get dat stuff
-			$key_val = explode(': ', $line);
-		}
-
-		return $this;
-	}
-
+	/**
+	 * Creates a curl request to Twitter for the information we
+	 * want and will return an array of the results in their raw
+	 * format.
+	 *
+	 * @param $num = int
+	 * @return array;
+	 */
 	public function fetch ($num = 1) {
 		if (!$this->fetching) {
 			$that = $this;
@@ -81,7 +73,7 @@ class Kirby_Twitter {
 					if ($error) {
 						return $that->fromCache($num);
 					} else {
-						$that->updateCache($data);
+						$that->updateCache(json_decode($data));
 					}
 					
 					# Decode our result
@@ -92,6 +84,13 @@ class Kirby_Twitter {
 		}
 	}
 
+	/**
+	 * Checks for previous results and requests new ones (if possible)
+	 * then returns the result at the implied index.
+	 *
+	 * @param @index = int
+	 * @return array
+	 */
 	public function get ($index = 0) {
 		if (!$this->results) {
 			$this->fetch(0);
@@ -99,12 +98,24 @@ class Kirby_Twitter {
 		return (object) $this->results[$index];
 	}
 
-	public function updateCache ($data) {
+	/**
+	 * Updates the cache object with new results
+	 *
+	 * @param $data
+	 * @return Kirby_Twitter
+	 */
+	public function updateCache (array $data) {
 		c::set(self::$cache_name, serialize($data));
 		return $this;
 	}
 	
-	public function fromCache ($num = 1) {
+	/**
+	 * Reads the status' in the cache when live isn't
+	 * available.
+	 *
+	 * @return array 
+	 */
+	public function fromCache () {
 		if (empty($this->_cache)) {
 			return (object) array(
 				"error" => "The cache wasn't loaded properly or is disabled.",
